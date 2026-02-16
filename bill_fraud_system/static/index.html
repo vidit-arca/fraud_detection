@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Fraud Detector — AI-Powered Document Analysis</title>
+    <meta name="description"
+        content="Upload medical bills for instant AI-powered fraud detection using Error Level Analysis and deep learning.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <!-- Animated background -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="M9 12l2 2 4-4" />
+                    </svg>
+                </div>
+                <div>
+                    <h1>Bill Fraud Detector</h1>
+                    <p class="logo-sub">AI-Powered Document Forensics</p>
+                </div>
+            </div>
+            <div class="header-badge">
+                <span class="badge-dot"></span>
+                Model Active
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Upload Section -->
+            <section class="upload-section" id="uploadSection">
+                <!-- Document Type Selector -->
+                <div class="doc-type-selector">
+                    <p class="selector-label">Select Document Type</p>
+                    <div class="type-toggle" id="typeToggle">
+                        <button class="type-btn active" data-type="bill" id="typeBill">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                <polyline points="14 2 14 8 20 8" />
+                                <line x1="16" y1="13" x2="8" y2="13" />
+                                <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                            Bill / Prescription
+                        </button>
+                        <button class="type-btn" data-type="card" id="typeCard">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                                <line x1="1" y1="10" x2="23" y2="10" />
+                            </svg>
+                            ECHS Card / ID
+                        </button>
+                    </div>
+                </div>
+
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                    </div>
+                    <h2>Upload Document for Analysis</h2>
+                    <p>Drag & drop an image here, or click to browse</p>
+                    <p class="upload-formats">Supports JPG, PNG, PDF</p>
+                    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" hidden>
+                </div>
+            </section>
+
+            <!-- Analysis Section (hidden initially) -->
+            <section class="analysis-section hidden" id="analysisSection">
+                <!-- Preview + Result side-by-side -->
+                <div class="analysis-grid">
+                    <!-- Image Preview -->
+                    <div class="card preview-card">
+                        <div class="card-header">
+                            <h3>Uploaded Document</h3>
+                            <button class="btn-ghost" id="newScanBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="1 4 1 10 7 10" />
+                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                </svg>
+                                New Scan
+                            </button>
+                        </div>
+                        <div class="image-preview" id="imagePreview">
+                            <img id="previewImg" alt="Uploaded document preview">
+                        </div>
+                        <div class="image-meta" id="imageMeta"></div>
+                    </div>
+
+                    <!-- Result Card -->
+                    <div class="card result-card" id="resultCard">
+                        <!-- Loading state -->
+                        <div class="loading-state" id="loadingState">
+                            <div class="scanner">
+                                <div class="scanner-line"></div>
+                            </div>
+                            <h3>Analyzing Document</h3>
+                            <p>Running forensic analysis...</p>
+                            <div class="loading-steps">
+                                <div class="step active" id="step1">
+                                    <div class="step-dot"></div>
+                                    <span>Extracting features</span>
+                                </div>
+                                <div class="step" id="step2">
+                                    <div class="step-dot"></div>
+                                    <span>Error Level Analysis</span>
+                                </div>
+                                <div class="step" id="step3">
+                                    <div class="step-dot"></div>
+                                    <span>Noise pattern analysis</span>
+                                </div>
+                                <div class="step" id="step4">
+                                    <div class="step-dot"></div>
+                                    <span>Computing anomaly score</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Result state -->
+                        <div class="result-state hidden" id="resultState">
+                            <div class="verdict" id="verdict">
+                                <div class="verdict-icon" id="verdictIcon"></div>
+                                <h2 id="verdictLabel"></h2>
+                                <p id="verdictSub"></p>
+                            </div>
+
+                            <div class="confidence-ring-container">
+                                <svg class="confidence-ring" viewBox="0 0 120 120" id="confidenceRing">
+                                    <circle class="ring-bg" cx="60" cy="60" r="52" />
+                                    <circle class="ring-fill" cx="60" cy="60" r="52" id="ringFill" />
+                                </svg>
+                                <div class="confidence-text">
+                                    <span class="confidence-value" id="confidenceValue">0</span>
+                                    <span class="confidence-unit">%</span>
+                                </div>
+                                <p class="confidence-label">Confidence</p>
+                            </div>
+
+                            <div class="score-breakdown">
+                                <h4>Detection Breakdown</h4>
+                                <div class="score-row">
+                                    <div class="score-label">
+                                        <span class="score-dot deep"></span>
+                                        Deep Feature Score
+                                    </div>
+                                    <span class="score-value" id="deepScoreVal">—</span>
+                                </div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar deep" id="deepBar"></div>
+                                </div>
+
+                                <div class="score-row">
+                                    <div class="score-label">
+                                        <span class="score-dot forensic"></span>
+                                        Forensic Score
+                                    </div>
+                                    <span class="score-value" id="forensicScoreVal">—</span>
+                                </div>
+                                <div class="score-bar-track">
+                                    <div class="score-bar forensic" id="forensicBar"></div>
+                                </div>
+
+                                <div class="score-row combined-row">
+                                    <div class="score-label">
+                                        <span class="score-dot combined"></span>
+                                        Combined Score
+                                    </div>
+                                    <span class="score-value" id="combinedScoreVal">—</span>
+                                </div>
+                                <div class="threshold-line">
+                                    <div class="threshold-marker" id="thresholdMarker">
+                                        <span>Threshold: <b id="thresholdVal">—</b></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="meta-row" id="processingTime"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by EfficientNet-B0 + Error Level Analysis + Isolation Forest</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,44 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# === Virtual Environment ===
+venv/
+env/
+.venv/
+
+# === Models (large binary files) ===
+models/*.pkl
+
+# === Training & Upload Data ===
+data/
+uploads/
+Tamp/
+
+# === macOS ===
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Logs & Temp ===
+*.log
+tmp/
+temp/
+
+# === Environment Variables ===
+.env
+.env.local
