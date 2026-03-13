@@ -210,9 +210,19 @@ function showResult(data) {
     verdictLabel.textContent = isTampered ? 'Tampered Document' : 'Genuine Document';
 
     // Verdict sub
-    document.getElementById('verdictSub').textContent = isTampered
-        ? 'Forensic analysis detected signs of manipulation'
+    // Verdict sub
+    console.log("Analysis Data:", data);
+
+    let subText = isTampered
+        ? 'Forensic analysis flagged this document'
         : 'No signs of tampering detected';
+
+    // If specific reason provided, show it
+    if (isTampered && data.tamper_reason && data.tamper_reason !== "None") {
+        subText = `Analysis detected: ${data.tamper_reason}`;
+    }
+
+    document.getElementById('verdictSub').textContent = subText;
 
     // Confidence ring
     const confidence = data.confidence;

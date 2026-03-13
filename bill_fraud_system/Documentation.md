@@ -446,3 +446,251 @@ python3 app.py
 | Forensic feature extraction | ~0.5s |
 | ELA tamper check | ~0.5s |
 | **Total** | **~3s per image** |
+
+---
+
+## Appendix A: Deep Feature Path — In-Depth Explanation
+
+Think of it like this: **you're hiring a detective to inspect a document by looking at it through magnifying glasses of different sizes, then asking "does anything look weird compared to genuine documents I've studied?"**
+
+### A1. Chop the Image into 83 Patches
+
+Instead of analyzing the whole image at once (where a small tampered region gets drowned out), the image gets sliced into a grid of patches at **3 zoom levels**:
+
+```
+┌───────────────────┐      ┌───────────────────┐      ┌───────────────────┐
+│   1   │   2   │ 3 │      │ 1│ 2│ 3│ 4│ 5│      │1│2│3│4│5│6│7│
+│───────┼───────┼───│      │──┼──┼──┼──┼──│      │─┼─┼─┼─┼─┼─┼─│
+│   4   │   5   │ 6 │      │ 6│ 7│ 8│ 9│10│      │ ... 49 patches │
+│───────┼───────┼───│      │──┼──┼──┼──┼──│      │               │
+│   7   │   8   │ 9 │      │  ...25 patches │      │               │
+└───────────────────┘      └───────────────────┘      └───────────────────┘
+     3×3 = 9                    5×5 = 25                  7×7 = 49
+  (big regions)            (medium regions)           (fine details)
+```
+
+**Why?** If someone changed just one digit in a price, only a small patch will look anomalous. If they replaced a whole section, larger patches will catch it.
+
+### A2. Feed Each Patch into EfficientNet-B0
+
+EfficientNet-B0 is a pre-trained **neural network** that has already learned to understand images from 1.2 million ImageNet images. We don't train it — we use it as a **feature extractor** (like borrowing someone's expert eyes).
+
+Each patch goes through the network, and we tap into **4 internal layers**:
+
+```
+Patch Image (32×32 pixels)
+     │
+     ▼
+  ┌─────────────┐
+  │  Layer 2     │ → 24 numbers describing edges, lines, basic textures
+  │  (Low-level) │   "Are the edges crisp? Is the noise pattern normal?"
+  ├─────────────┤
+  │  Layer 4     │ → 40 numbers describing shapes, strokes
+  │  (Mid-level) │   "Do the characters look natural? Are fonts consistent?"
+  ├─────────────┤
+  │  Layer 6     │ → 112 numbers describing structure
+  │  (High-level)│   "Does the layout make sense for a bill?"
+  ├─────────────┤
+  │  Layer 8     │ → 1280 numbers describing semantic content
+  │  (Semantic)  │   "What kind of object/document is this?"
+  └─────────────┘
+           │
+           ▼
+    Concatenate all → 488-number "fingerprint" per patch
+```
+
+**Why multiple layers?** A tampered region might look fine content-wise (layer 8 says "looks like text") but have unnatural edges (layer 2 says "these edges don't match the rest"). By capturing all levels, we catch more subtle manipulations.
+
+### A3. Reduce with PCA (488 → ~50 dimensions)
+
+488 numbers per patch is too many — many are redundant or noisy. **PCA** finds the ~50 most meaningful dimensions that capture 95% of the information.
+
+Think of it as: *"Out of 488 measurements, only ~50 are actually telling us something unique."*
+
+### A4. Isolation Forest Scores Each Patch
+
+The **Isolation Forest** (300 random decision trees) was trained on patches from genuine documents. It learned the "normal" feature distribution. Now for each new patch, it asks:
+
+> *"How quickly can I separate this patch from everything I've seen before?"*
+
+- **Genuine patch** → Looks like many training patches → Takes many splits to isolate → **Low score**
+- **Tampered patch** → Looks different from anything trained on → Isolated quickly → **High score**
+
+```
+                    Genuine patches          Tampered patch
+                    clustered together       isolated quickly
+                         •  •                      •
+                       •  •  •                    ╱
+                      •  •  •  •               ──╱── (one split!)
+                        •  •                  
+                      (many splits            (few splits = 
+                       to isolate)             HIGH anomaly score)
+```
+
+### A5. Top-5 Aggregation
+
+Each image produced 83 patches × 1 score each = 83 scores. We pick the **5 most suspicious patches** and average them:
+
+```
+Patch scores: [0.1, 0.05, 0.2, 0.08, 0.95, 0.03, 0.88, 0.12, ...]
+                                         ↑              ↑
+                                    suspicious!     suspicious!
+                                    
+Top-5 average: (0.95 + 0.88 + 0.2 + 0.12 + 0.1) / 5 = 0.45 → Deep Score
+```
+
+**Why Top-5?** If someone tampered with one small area, only 2–3 patches would have high scores. Using the `mean` of all 83 would dilute the signal. Using `max` would be too noisy (one random high score = false alarm). Top-5 is the sweet spot.
+
+### Summary
+
+```
+Image → 83 patches → EfficientNet extracts 488 features each → 
+PCA reduces to ~50 → Isolation Forest scores each patch → 
+Top-5 most suspicious patches averaged → Deep Score
+```
+
+The Deep Score captures **"does this document's visual content look structurally consistent with genuine documents?"** — it's complementary to the Forensic Path which checks for compression/editing artifacts.
+
+---
+
+## Appendix B: Mahalanobis Distance — In-Depth Explanation
+
+### The Problem with Regular (Euclidean) Distance
+
+Imagine you have a dataset of genuine bills, and you measure two things about each: **ELA mean** and **noise level**. If you plot them:
+
+```
+Noise ↑
+  15 │                          • (new document)
+     │        
+  10 │    ●  ●  ●
+     │   ●  ●  ●  ●     ← Genuine bills cluster here
+   5 │    ●  ●  ●
+     │
+   0 └──────────────────→ ELA Mean
+      0    5    10   15
+```
+
+**Euclidean distance** just measures the straight-line distance from the center of the cluster. But what if the cluster is **elongated** (correlated)?
+
+```
+Noise ↑
+  15 │                 ★ Point A           ★ Point B
+     │              ●
+  10 │           ●  ●  ●
+     │        ●  ●  ●  ●  ●     ← Genuine bills are correlated:
+   5 │     ●  ●  ●  ●              high ELA → high noise
+     │  ●  ●  ●
+   0 └──────────────────────→ ELA Mean
+```
+
+Points A and B are the **same Euclidean distance** from the center. But:
+- **Point A** is above the cluster — clearly abnormal ⚠️
+- **Point B** is along the cluster's natural direction — probably normal ✅
+
+**Euclidean distance can't tell them apart. Mahalanobis distance can.**
+
+### What Mahalanobis Does
+
+It **stretches and rotates** the space so the cluster becomes a perfect circle, then measures distance in that transformed space:
+
+```
+BEFORE (Euclidean)                    AFTER (Mahalanobis)
+                                      
+Noise ↑                               Transformed ↑
+      │     ●                              │     ●
+      │  ●  ●  ●                           │  ●  ●  ●
+      │●  ●  ●  ●  ●         →            │●  ●  ●  ●
+      │  ●  ●  ●                           │  ●  ●  ●
+      │     ●                              │     ●
+      └──────────→ ELA                     └──────────→
+   Elongated ellipse                    Perfect circle
+   (correlations ignored)               (correlations accounted for)
+```
+
+### The Formula
+
+```
+D_M(x) = √( (x − μ)ᵀ  Σ⁻¹  (x − μ) )
+           ─────────   ───   ─────────
+           "how far    "undo   "how far
+            from the   the      from the
+            center"    shape"   center"
+```
+
+| Symbol | Meaning |
+|--------|---------|
+| **x** | The new document's 28 forensic features |
+| **μ** | Average forensic features of all genuine training documents |
+| **Σ⁻¹** | Inverse of the covariance matrix — this is the magic part that accounts for correlations and different scales |
+
+### Why It Matters for Fraud Detection
+
+Our 28 forensic features are **correlated** — for example:
+- High ELA mean usually comes with high ELA std
+- Noise mean and noise std tend to move together
+
+Mahalanobis distance accounts for this. A tampered document might have normal ELA mean AND normal noise level individually, but the **combination** could be abnormal (e.g., high ELA with unusually low noise = edited and re-saved).
+
+```
+                       Euclidean says:         Mahalanobis says:
+Genuine bill           distance = 1.2 ✅       distance = 0.8 ✅
+Tampered bill          distance = 1.5 🤷       distance = 847,000 ⚠️
+(looks normal on                               (feature COMBINATION
+ each feature alone)                            is wildly abnormal)
+```
+
+### In Our System
+
+The forensic path computes the Mahalanobis distance of each uploaded document from the distribution of genuine training documents. A genuine document should have a **small** distance (it fits the cluster). A tampered document will have a **huge** distance (the specific combination of ELA + noise features doesn't match anything seen in training).
+
+That's why you see scores of **0.x** for genuine vs **100,000+** for tampered — the tampered document's forensic fingerprint falls far outside the genuine distribution in the correlation-aware space.
+
+---
+
+## Appendix C: Generalization Assessment — Will This Work on Unseen Data?
+
+**Realistic estimate: 70–85% accuracy on unseen data**, depending on how similar the new data is to the training data.
+
+### Strengths (in your favor)
+
+| Factor | Why It Helps |
+|--------|-------------|
+| **Physics-based forensic features** | ELA and noise analysis detect actual compression/editing artifacts — these are universal signals, not learned patterns |
+| **Three-layer redundancy** | Model check + ELA safety net means two independent chances to catch tampering |
+| **Massive score separation** | Bill model sees tampered scores of 100K–683K vs genuine <2 — hard to miss even with distribution shift |
+| **Unsupervised approach** | Isolation Forest learns "normal" rather than memorizing specific tampering — less prone to overfitting |
+
+### Risks
+
+| Risk | Impact | Likelihood |
+|------|--------|-----------|
+| **Small training set** (43 bills, 123 cards) | The model hasn't seen enough variety — different hospitals, printers, formats could look anomalous | ⚠️ **High** |
+| **Only one tampering style seen** | The 28 tampered images may all use similar editing tools — a different tampering method (e.g., AI-generated fakes, printed-then-rescanned) could evade detection | ⚠️ **Medium-High** |
+| **Scan quality variance** | Different scanners, resolutions, or phone cameras will shift the noise/ELA distributions | ⚠️ **Medium** |
+| **No cross-validation** | We tested on training data — true unseen accuracy is unknown | ⚠️ **High** |
+| **ELA threshold fragile** | Calibrated on just 28+152 samples — a few edge cases could break the 2.4 threshold | ⚠️ **Medium** |
+
+### Biggest Concern: Training Set Size
+
+With only **43 bill images**, the model has seen a very narrow slice of what "genuine" looks like. In production:
+
+- If a new hospital uses a different bill format → likely flagged as TAMPERED (false positive)
+- If a tampered bill uses AI-generated content → may pass as GENUINE (false negative)
+- If a document is photographed instead of scanned → noise profile changes significantly
+
+### How to Improve Generalization
+
+1. **More training data** — The single most impactful improvement. Getting to **200+ genuine bills** from **different hospitals/formats** would dramatically improve robustness
+2. **More tampered examples** — Different tampering methods (Photoshop, phone edits, printout re-scans, AI generation)
+3. **Cross-validation** — Hold out 20% of data during training to measure true generalization
+4. **Production monitoring** — Log predictions and have human review catch errors, then retrain periodically
+
+### Bottom Line
+
+> The model will work **very well** on documents similar to your training data (same hospitals, same scanners, same tampering style). It will **struggle** with documents that look visually different from training. The ELA safety net provides a decent fallback, but it's not bulletproof.
+
+| Use Case | Assessment |
+|----------|-----------|
+| **Pilot / Demo** | Solid ✅ |
+| **Production deployment** | Needs 3–5× more diverse training data first ⚠️ |

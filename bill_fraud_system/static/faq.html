@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ — Bill Fraud Detector</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .faq-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .faq-header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .faq-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .faq-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .faq-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .faq-question {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .faq-question svg {
+            color: #6366f1;
+        }
+
+        .faq-answer {
+            color: #94a3b8;
+            line-height: 1.6;
+            font-size: 1rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 30px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow-1"></div>
+
+    <div class="faq-container">
+        <a href="/" class="back-link">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Back to Analyzer
+        </a>
+
+        <div class="faq-header">
+            <h1>Frequently Asked Questions</h1>
+            <p style="color: #94a3b8;">Understanding how our AI detects document fraud</p>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                What is ELA (Error Level Analysis)?
+            </div>
+            <div class="faq-answer">
+                ELA stands for <strong>Error Level Analysis</strong>. It's a forensic technique that identifies areas of
+                an image that have been compressed at different levels. When someone digitally edits a document (like
+                pasting a new number over an old one), the pasted section often has a different "compression quality"
+                than the background. Our system detects these inconsistencies to spot tampering that is invisible to the
+                naked eye.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path
+                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                    </path>
+                </svg>
+                What does "Deep Feature Analysis" mean?
+            </div>
+            <div class="faq-answer">
+                We use advanced AI (EfficientNet) to examine the <strong>structure and layout</strong> of the document.
+                The model looks at fonts, spacing, logo placement, and line alignment. If a document claims to be a
+                medical bill but uses fonts or layouts that don't match known genuine examples, the deep feature
+                analysis flags it as a "structural anomaly."
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                </svg>
+                Why was my genuine bill flagged as "Tampered"?
+            </div>
+            <div class="faq-answer">
+                Our model effectively learns what "normal" bills look like from a specific set of training data (e.g.,
+                bills from specific hospitals). If you upload a genuine bill from a <strong>new hospital</strong> or
+                with a significantly different layout that the model hasn't seen before, it may be flagged as an
+                anomaly. This is a safety precaution—any document that significantly deviates from the known standard is
+                marked for review.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                What file types are supported?
+            </div>
+            <div class="faq-answer">
+                We support <strong>JPG, PNG, and PDF</strong> files. PDF documents are automatically converted to
+                high-resolution images on our secure server before analysis. For best results, use original digital
+                files or high-quality scans rather than photos of screens.
+            </div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                What does "Inconsistent Noise Pattern" mean?
+            </div>
+            <div class="faq-answer">
+                Every digital image has a natural "grain" or noise pattern created by the camera sensor or scanner. When
+                an image is digitally manipulated, this noise pattern is often disrupted or smoothed out in the edited
+                areas. Our system detects these subtle interruptions in the noise texture to identify forged regions.
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>

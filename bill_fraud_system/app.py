@@ -46,7 +46,7 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Dual-model paths
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
-BILL_MODEL_PATH = os.path.join(MODELS_DIR, "patch_model.pkl")
+BILL_MODEL_PATH = os.path.join(MODELS_DIR, "bill_model_v2.pkl")
 CARD_MODEL_PATH = os.path.join(MODELS_DIR, "card_model.pkl")
 
 # Model containers
@@ -89,6 +89,10 @@ async def startup_event():
 @app.get("/")
 async def root():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+@app.get("/faq")
+async def faq():
+    return FileResponse(os.path.join(STATIC_DIR, "faq.html"))
 
 
 @app.get("/api/models")
@@ -210,6 +214,28 @@ async def analyze_bill(
         else:
             margin = (threshold - combined) / (threshold + abs(combined) + 1e-8)
             confidence = min(99.9, 60 + 40 * min(1.0, margin))
+
+        # Determine tampering reason
+        tamper_reason = "None"
+        if is_tampered:
+            reasons = []
+            # Check model components
+            if model_flagged:
+                # Check if deep (visual/structure) score is high
+                if deep_score > 0.5:  # calibrated threshold
+                    reasons.append("Visual/structural anomalies detected")
+                # Check if forensic (noise/ELA) score is high
+                if forensic_score > 0.5:
+                    reasons.append(" inconsistent compression artifacts")
+            
+            # Check ELA specific
+            if ela_flagged:
+                reasons.append("Abnormal editing traces (ELA)")
+            
+            if not reasons:
+                reasons.append("Statistical anomaly in document structure")
+            
+            tamper_reason = "; ".join(reasons).replace("detected; ", "detected, ").capitalize()
         
         elapsed = time.time() - start_time
         
@@ -230,6 +256,7 @@ async def analyze_bill(
                 "format": ext.replace(".", "").upper(),
             },
             "upload_url": f"/uploads/{os.path.basename(analysis_path)}",
+            "tamper_reason": tamper_reason,
         }
         
         return JSONResponse(content=result)
