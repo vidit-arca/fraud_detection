@@ -14,7 +14,7 @@ env/
 .venv/
 
 # === Models (large binary files) ===
-models/*.pkl
+models/
 
 # === Training & Upload Data ===
 data/

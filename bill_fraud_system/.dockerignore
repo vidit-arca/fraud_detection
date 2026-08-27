@@ -1,0 +1,33 @@
+# Git & OS files
+.git
+.gitignore
+.DS_Store
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# IDE files
+.vscode/
+.idea/
+
+# Local uploads & logs
+uploads/*
+!uploads/.gitkeep
+logs/
+
+# Heavy datasets & demos (not needed inside image, can be mounted or used locally)
+data/
+Tamp/
+demo/
+*.jpg
+*.jpeg
+*.png
+*.pdf
+
+# Model checkpoints (optional: exclude if they will be mounted via volumes)
+# If you want to package trained models in the image, comment the line below:
+models/*.pkl

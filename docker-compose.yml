@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  fraud-detection-api:
+    build:
+      context: ./bill_fraud_system
+      dockerfile: Dockerfile
+    container_name: bill-fraud-system-api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the models directory to persist trained .pkl files between container restarts
+      # and allow host-trained models to be used inside the container.
+      - ./bill_fraud_system/models:/app/models
+      # Mount the uploads directory to easily inspect uploaded documents for auditing/debugging
+      - ./bill_fraud_system/uploads:/app/uploads
+    environment:
+      - PORT=8000
+    restart: unless-stopped

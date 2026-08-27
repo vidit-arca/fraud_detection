@@ -1,0 +1,47 @@
+# === Datasets & Demo Folders ===
+dataset/
+demo/
+
+# === Large Models & Artifacts ===
+*.pkl
+*.pth
+*.pt
+*.onnx
+models/
+bill_fraud_system/models/
+
+# === Uploads & Temporary Data ===
+uploads/
+bill_fraud_system/uploads/
+tmp/
+temp/
+*.log
+
+# === Python Cache & Environments ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# === macOS & OS Files ===
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# === IDE Configurations ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Environment Variables ===
+.env
+.env.local
