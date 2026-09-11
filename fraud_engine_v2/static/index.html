@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Engine v2 — AI Document Fraud & Tamper Localization</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-background">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <header class="app-header">
+        <div class="header-container">
+            <div class="logo-group">
+                <div class="logo-icon">🛡️</div>
+                <div>
+                    <h1>Fraud Engine <span class="badge-version">v2.0</span></h1>
+                    <p class="tagline">Multi-Tiered Forensic & Pixel-Level Tamper Localization</p>
+                </div>
+            </div>
+            <div class="header-status">
+                <span class="status-indicator"></span>
+                <span id="engineStatusText">Engine Active</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Upload Section -->
+        <section class="upload-section glass-card" id="uploadSection">
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" hidden>
+                <div class="drop-content">
+                    <div class="upload-icon-wrapper">
+                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h3>Upload Document to Inspect</h3>
+                    <p>Drag & drop medical bills, lab reports, or identity documents</p>
+                    <div class="file-badges">
+                        <span>JPG</span>
+                        <span>PNG</span>
+                        <span>PDF</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Select Document</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading State -->
+        <section class="loading-section glass-card" id="loadingSection" style="display: none;">
+            <div class="scanner-anim">
+                <div class="scanner-laser"></div>
+            </div>
+            <h3 id="loadingText">Running Multi-Layer Forensic Inspection...</h3>
+            <p class="loading-subtext">Executing TruFor Segmentation, Multi-Q ELA, DCT Grid Analysis & Typographic Verifiers</p>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <!-- Top Verdict Banner -->
+            <div class="verdict-banner glass-card" id="verdictBanner">
+                <div class="verdict-main">
+                    <div class="verdict-badge" id="verdictBadge">TAMPERED</div>
+                    <div class="verdict-details">
+                        <h2 id="verdictTitle">Document Manipulation Detected</h2>
+                        <p id="verdictReason">Multiple localized text modifications and compression anomalies identified.</p>
+                    </div>
+                </div>
+                <div class="verdict-score-box">
+                    <div class="confidence-circle" id="confidenceCircle">
+                        <span class="confidence-num" id="confidenceVal">98.4%</span>
+                        <span class="confidence-label">Confidence</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Layout Grid -->
+            <div class="analysis-grid">
+                <!-- Viewer Panel -->
+                <div class="viewer-panel glass-card">
+                    <div class="viewer-header">
+                        <h3>Document Forensic Inspector</h3>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active" id="btnShowOverlay" onclick="switchView('overlay')">Annotated Heatmap</button>
+                            <button class="toggle-btn" id="btnShowOriginal" onclick="switchView('original')">Original Document</button>
+                        </div>
+                    </div>
+
+                    <div class="image-viewport-wrapper">
+                        <div class="image-viewport" id="imageViewport">
+                            <img id="displayImage" src="" alt="Document View">
+                        </div>
+                    </div>
+
+                    <div class="viewer-footer">
+                        <span id="regionCountBadge" class="info-badge">🔍 0 Tampered Regions Localized</span>
+                        <span id="procTimeBadge" class="info-badge">⏱️ 0.00s</span>
+                    </div>
+                </div>
+
+                <!-- Diagnostics & Evidence Panel -->
+                <div class="diagnostics-panel">
+                    <!-- Localized Regions List -->
+                    <div class="glass-card panel-card">
+                        <h3>Localized Anomaly Regions</h3>
+                        <div class="regions-list" id="regionsList">
+                            <!-- Injected by app.js -->
+                        </div>
+                    </div>
+
+                    <!-- Multi-Layer Diagnostic Scores -->
+                    <div class="glass-card panel-card">
+                        <h3>Multi-Layer Forensic Breakdown</h3>
+                        <div class="metrics-grid">
+                            <div class="metric-item">
+                                <span class="metric-name">Pixel Segmentation</span>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="barSeg" style="width: 0%"></div>
+                                </div>
+                                <span class="metric-val" id="valSeg">0.00</span>
+                            </div>
+
+                            <div class="metric-item">
+                                <span class="metric-name">Forensic Signals (ELA/SRM)</span>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="barSignal" style="width: 0%"></div>
+                                </div>
+                                <span class="metric-val" id="valSignal">0.00</span>
+                            </div>
+
+                            <div class="metric-item">
+                                <span class="metric-name">Typography & Baseline</span>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="barTypo" style="width: 0%"></div>
+                                </div>
+                                <span class="metric-val" id="valTypo">0.00</span>
+                            </div>
+
+                            <div class="metric-item">
+                                <span class="metric-name">DCT Double Compression</span>
+                                <div class="metric-bar-bg">
+                                    <div class="metric-bar-fill" id="barDct" style="width: 0%"></div>
+                                </div>
+                                <span class="metric-val" id="valDct">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="actions-panel">
+                        <button class="btn btn-secondary" onclick="resetApp()">Inspect Another Document</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>Fraud Engine v2 • Built for Medical & Document Integrity Verification</p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
