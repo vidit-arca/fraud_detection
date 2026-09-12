@@ -16,6 +16,7 @@ if BASE_DIR not in sys.path:
 from src.fraud_engine import DocumentFraudEngine
 from src.dataset_loader import create_or_load_splits, DocumentTamperDataset, DEFAULT_DATASET_DIR
 from src.train_segmentor import evaluate, FocalDiceLoss
+from src.prediction_organizer import PredictionHierarchyOrganizer
 
 
 def format_box(box):
@@ -205,10 +206,30 @@ def predict_batch(engine, folder_path, output_dir="outputs", recursive=True, det
         print(f"📊 JSON summary exported to: {os.path.abspath(json_output)}")
 
 
-def evaluate_test_split(model_path, dataset_dir=DEFAULT_DATASET_DIR, batch_size=16, img_size=512, log_file=None):
+def evaluate_test_split(
+    model_path, 
+    dataset_dir=DEFAULT_DATASET_DIR, 
+    batch_size=16, 
+    img_size=512, 
+    log_file=None,
+    output_dir=None,
+    export_hierarchy=True
+):
     """
     Runs comprehensive benchmark evaluation across BOTH unseen genuine and unseen tampered
     documents in the 15% test split (522 genuine + 522 tampered = 1,044 total test documents).
+    
+    When export_hierarchy is True and output_dir is provided, it organizes all results into:
+      output_dir/
+        by_outcome/
+          true_positives_TP/<doc_id>/ (01_original, 02_input, 03_gt_mask, 04_predicted_overlay, 05_side_by_side, result.json)
+          false_negatives_FN/<doc_id>/
+          true_negatives_TN/<doc_id>/
+          false_positives_FP/<doc_id>/
+        galleries/
+        classification_report.csv
+        summary.json
+        index.html (interactive comparison dashboard)
     """
     log_lines = []
     def log_print(msg):
@@ -217,6 +238,8 @@ def evaluate_test_split(model_path, dataset_dir=DEFAULT_DATASET_DIR, batch_size=
 
     log_print(f"\n🧪 Starting Comprehensive Benchmark Evaluation on Unseen Test Split...")
     log_print(f"📁 Dataset Directory: {dataset_dir}")
+    if output_dir and export_hierarchy:
+        log_print(f"🗂️  Exporting Structured Hierarchy to: {os.path.abspath(output_dir)}")
     
     splits = create_or_load_splits(dataset_dir=dataset_dir)
     test_samples = splits.get("test", [])
@@ -239,16 +262,24 @@ def evaluate_test_split(model_path, dataset_dir=DEFAULT_DATASET_DIR, batch_size=
         precision="fp32" if device.type != "cuda" else "bf16"
     )
     
+    # Temp folder for intermediate overlays if exporting hierarchy
+    temp_overlay_dir = os.path.join(output_dir, "_temp_overlays") if output_dir else None
+    if temp_overlay_dir:
+        os.makedirs(temp_overlay_dir, exist_ok=True)
+
+    evaluated_records = []
+
     # 2. Document-Level End-to-End Evaluation on TAMPERED Test Pages
     log_print(f"[2/3] Evaluating End-to-End Fraud Pipeline on {len(test_samples)} TAMPERED Pages...")
     tamp_tp = 0
     tamp_fn = 0
     tamp_errors = []
     
-    for item in test_samples:
+    for idx, item in enumerate(test_samples, 1):
         t_path = item["tampered_image"]
+        sample_id = item.get("id", f"tampered_doc_{idx}")
         if os.path.exists(t_path):
-            res = engine.analyze_document(t_path)
+            res = engine.analyze_document(t_path, output_dir=temp_overlay_dir)
             if res["status"] == "TAMPERED":
                 tamp_tp += 1
             else:
@@ -261,6 +292,19 @@ def evaluate_test_split(model_path, dataset_dir=DEFAULT_DATASET_DIR, batch_size=
                     bd.get("tamper_area_ratio", 0),
                     bd.get("tamper_peak_score", 0)
                 ))
+            
+            if output_dir and export_hierarchy:
+                rec = PredictionHierarchyOrganizer.organize_evaluation_sample(
+                    output_base_dir=output_dir,
+                    sample_id=sample_id,
+                    input_img_path=t_path,
+                    gt_label="TAMPERED",
+                    result_dict=res,
+                    orig_img_path=item.get("original_image"),
+                    gt_mask_path=item.get("mask_image"),
+                    ocr_json_path=item.get("ocr_json")
+                )
+                evaluated_records.append(rec)
                 
     # 3. Document-Level End-to-End Evaluation on GENUINE (Original) Test Pages
     log_print(f"[3/3] Evaluating End-to-End Fraud Pipeline on {len(test_samples)} GENUINE Pages...")
@@ -269,11 +313,12 @@ def evaluate_test_split(model_path, dataset_dir=DEFAULT_DATASET_DIR, batch_size=
     gen_errors = []
     gen_count = 0
     
-    for item in test_samples:
+    for idx, item in enumerate(test_samples, 1):
         o_path = item.get("original_image")
+        sample_id = f"genuine_{item.get('doc_name', 'doc')}_page_{item.get('page', idx)}"
         if o_path and os.path.exists(o_path):
             gen_count += 1
-            res = engine.analyze_document(o_path)
+            res = engine.analyze_document(o_path, output_dir=temp_overlay_dir)
             if res["status"] == "GENUINE":
                 gen_tn += 1
             else:
@@ -287,14 +332,48 @@ def evaluate_test_split(model_path, dataset_dir=DEFAULT_DATASET_DIR, batch_size=
                     bd.get("tamper_peak_score", 0)
                 ))
                 
+            if output_dir and export_hierarchy:
+                rec = PredictionHierarchyOrganizer.organize_evaluation_sample(
+                    output_base_dir=output_dir,
+                    sample_id=sample_id,
+                    input_img_path=o_path,
+                    gt_label="GENUINE",
+                    result_dict=res,
+                    orig_img_path=o_path,
+                    gt_mask_path=None,
+                    ocr_json_path=item.get("ocr_json")
+                )
+                evaluated_records.append(rec)
+                
     # 4. Summary & Metrics Calculation
     total_docs = len(test_samples) + gen_count
-    overall_acc = ((tamp_tp + gen_tn) / max(1, total_docs)) * 100.0
-    tamp_recall = (tamp_tp / max(1, len(test_samples))) * 100.0
-    gen_specificity = (gen_tn / max(1, gen_count)) * 100.0 if gen_count > 0 else 100.0
-    doc_precision = (tamp_tp / max(1, tamp_tp + gen_fp)) * 100.0
-    doc_f1 = (2.0 * doc_precision * tamp_recall) / max(1e-4, doc_precision + tamp_recall)
+    overall_acc = round(((tamp_tp + gen_tn) / max(1, total_docs)) * 100.0, 2)
+    tamp_recall = round((tamp_tp / max(1, len(test_samples))) * 100.0, 2)
+    gen_specificity = round((gen_tn / max(1, gen_count)) * 100.0 if gen_count > 0 else 100.0, 2)
+    doc_precision = round((tamp_tp / max(1, tamp_tp + gen_fp)) * 100.0, 2)
+    doc_f1 = round((2.0 * doc_precision * tamp_recall) / max(1e-4, doc_precision + tamp_recall), 2)
     
+    summary_data = {
+        "total_documents": total_docs,
+        "tampered_total": len(test_samples),
+        "genuine_total": gen_count,
+        "overall_acc": overall_acc,
+        "tamp_recall": tamp_recall,
+        "gen_specificity": gen_specificity,
+        "doc_precision": doc_precision,
+        "doc_f1": doc_f1,
+        "pixel_f1": round(pixel_metrics.get("pixel_f1", 0) * 100.0, 2),
+        "pixel_iou": round(pixel_metrics.get("pixel_iou", 0) * 100.0, 2),
+        "pixel_precision": round(pixel_metrics.get("pixel_precision", 0) * 100.0, 2),
+        "pixel_recall": round(pixel_metrics.get("pixel_recall", 0) * 100.0, 2),
+        "confusion_matrix": {
+            "true_positives_TP": tamp_tp,
+            "false_negatives_FN": tamp_fn,
+            "true_negatives_TN": gen_tn,
+            "false_positives_FP": gen_fp
+        }
+    }
+
     log_print("\n" + "=" * 80)
     log_print(f"🏆 COMPLETE BENCHMARK RESULTS ON UNSEEN TEST SPLIT ({total_docs} Total Pages)")
     log_print("=" * 80)
@@ -311,10 +390,10 @@ def evaluate_test_split(model_path, dataset_dir=DEFAULT_DATASET_DIR, batch_size=
     log_print(f"   • ❌ Genuine Pages Flagged (False Positives)  : {gen_fp} / {gen_count}")
     log_print("-" * 80)
     log_print(f"🔍 PIXEL-LEVEL TAMPER LOCALIZATION (TruFor Segmentor):")
-    log_print(f"   • Pixel F1-Score (Dice)     : {pixel_metrics.get('pixel_f1', 0)*100:.2f}%")
-    log_print(f"   • Pixel IoU (Jaccard)       : {pixel_metrics.get('pixel_iou', 0)*100:.2f}%")
-    log_print(f"   • Pixel Precision           : {pixel_metrics.get('pixel_precision', 0)*100:.2f}%")
-    log_print(f"   • Pixel Recall              : {pixel_metrics.get('pixel_recall', 0)*100:.2f}%")
+    log_print(f"   • Pixel F1-Score (Dice)     : {summary_data['pixel_f1']:.2f}%")
+    log_print(f"   • Pixel IoU (Jaccard)       : {summary_data['pixel_iou']:.2f}%")
+    log_print(f"   • Pixel Precision           : {summary_data['pixel_precision']:.2f}%")
+    log_print(f"   • Pixel Recall              : {summary_data['pixel_recall']:.2f}%")
     log_print("=" * 80)
     
     if gen_errors:
@@ -329,6 +408,30 @@ def evaluate_test_split(model_path, dataset_dir=DEFAULT_DATASET_DIR, batch_size=
             log_print(f"   - {name} | conf={conf:.1f}% score={sc:.4f} | area_ratio={area:.5f} peak={peak:.4f}")
     log_print("=" * 80 + "\n")
     
+    # 5. Export Structured Reports & Clean Up Temp Overlays
+    if output_dir and export_hierarchy:
+        # Save summary JSON
+        with open(os.path.join(output_dir, "summary.json"), "w") as f:
+            json.dump(summary_data, f, indent=2)
+            
+        # Export CSV report
+        csv_p = PredictionHierarchyOrganizer.generate_csv_report(output_dir, evaluated_records)
+        
+        # Export Interactive HTML Dashboard
+        html_p = PredictionHierarchyOrganizer.generate_interactive_html_dashboard(output_dir, summary_data, evaluated_records)
+        
+        # Clean temp directory
+        if temp_overlay_dir and os.path.exists(temp_overlay_dir):
+            import shutil
+            shutil.rmtree(temp_overlay_dir, ignore_errors=True)
+            
+        log_print(f"✨ Structured evaluation hierarchy successfully generated!")
+        log_print(f"   • 📁 Root Output Folder : file://{os.path.abspath(output_dir)}")
+        log_print(f"   • 🌐 Visual Dashboard   : file://{os.path.abspath(html_p)}")
+        log_print(f"   • 📊 Classification CSV : file://{os.path.abspath(csv_p)}")
+        log_print(f"   • 📑 Metrics JSON       : file://{os.path.abspath(os.path.join(output_dir, 'summary.json'))}")
+        log_print("=" * 80 + "\n")
+
     if log_file:
         with open(log_file, "w") as f:
             f.write("\n".join(log_lines) + "\n")
@@ -343,17 +446,24 @@ def main():
     parser.add_argument("--model_path", type=str, default=os.path.join(BASE_DIR, "models", "tamper_segmentor.pth"), 
                         help="Path to trained model weights")
     parser.add_argument("--output_dir", type=str, default=os.path.join(BASE_DIR, "outputs"), 
-                        help="Directory to save annotated heatmap overlays")
+                        help="Directory to save organized evaluation hierarchy or annotated overlays")
     parser.add_argument("--evaluate_test", action="store_true", help="Run full benchmark evaluation on unseen test split")
     parser.add_argument("--dataset_dir", type=str, default=DEFAULT_DATASET_DIR, help="Dataset base path for test evaluation")
     parser.add_argument("--json_output", type=str, help="Save result to a JSON file")
     parser.add_argument("--log_file", type=str, help="Save full batch terminal log to a .log text file")
     parser.add_argument("--no_recursive", action="store_true", help="Disable recursive subfolder search in batch mode")
+    parser.add_argument("--no_hierarchy", action="store_true", help="Disable structured folder hierarchy creation during evaluation")
     
     args = parser.parse_args()
     
     if args.evaluate_test:
-        evaluate_test_split(args.model_path, dataset_dir=args.dataset_dir, log_file=args.log_file)
+        evaluate_test_split(
+            args.model_path, 
+            dataset_dir=args.dataset_dir, 
+            log_file=args.log_file,
+            output_dir=args.output_dir,
+            export_hierarchy=(not args.no_hierarchy)
+        )
         sys.exit(0)
         
     engine = DocumentFraudEngine(model_path=args.model_path)
@@ -380,3 +490,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

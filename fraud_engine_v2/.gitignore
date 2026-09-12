@@ -1,0 +1,64 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Model checkpoints & weights (large binaries)
+models/*.pth
+models/*.pt
+models/*.onnx
+models/*.bin
+models/*.ckpt
+!models/.gitkeep
+
+# Dataset directories & raw image data
+dataset/
+datasets/
+dataset_*/
+data/
+tmp/
+*.zip
+*.tar.gz
+*.tar
+*.rar
+
+# Inference & Benchmark Outputs
+outputs/
+uploads/
+_temp_overlays/
+temp/
+
+# Logs & Nohup Process Outputs
+*.log
+nohup*.out
+*.out
+test_benchmark_*.log
+
+# Environment & Package Managers
+venv/
+.venv/
+env/
+ENV/
+nnunet_env/
+.conda/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor Configs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Model checkpoints & weights (large binaries)
+models/*.pth
+models/*.pt
+models/*.onnx
+models/*.bin
+models/*.ckpt
+bill_fraud_system/models/
+fraud_engine_v2/models/*.pth
+
+# Dataset directories & raw image collections
+dataset/
+datasets/
+dataset_*/
+data/
+tmp/
+*.zip
+*.tar.gz
+
+# Output folders, uploads & visual dumps
+outputs/
+uploads/
+fraud_engine_v2/outputs/
+fraud_engine_v2/uploads/
+_temp_overlays/
+
+# Logs & Execution Traces
+*.log
+nohup*.out
+*.out
+test_benchmark_*.log
+
+# Environments
+venv/
+.venv/
+env/
+nnunet_env/
+
+# OS metadata
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
