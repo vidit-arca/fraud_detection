@@ -54,6 +54,7 @@ fraud_engine_v2/
 ├── predict.py                   # CLI prediction and benchmark entrypoint
 ├── app.py                       # FastAPI production REST server (Port 8000)
 ├── requirements.txt             # Project dependencies
+├── FRAUD_ENGINE_METHODOLOGY.md  # Detailed engineering & forensic methodology whitepaper
 ├── EXECUTIVE_BENCHMARK_REPORT.md # Executive whitepaper for leadership / C-suite
 └── EXECUTIVE_BENCHMARK_REPORT.html # Print-ready / PDF executive report
 ```

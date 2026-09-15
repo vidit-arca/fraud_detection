@@ -25,8 +25,9 @@ ACTUAL GENUINE  (521)            0 [FP]                521 [TN]       ──> 10
 ## 📁 Repository Overview
 
 * **[`fraud_engine_v2/`](fraud_engine_v2/)**: **Current Production Engine (v2.0)** with multi-scale Test-Time Augmentation (TTA), dual-stream pixel segmentation (TruFor), automated prediction hierarchy export, and REST API.
+* **[`FRAUD_ENGINE_METHODOLOGY.md`](fraud_engine_v2/FRAUD_ENGINE_METHODOLOGY.md)**: Comprehensive technical and forensic engineering methodology whitepaper.
+* **[`EXECUTIVE_BENCHMARK_REPORT.md`](fraud_engine_v2/EXECUTIVE_BENCHMARK_REPORT.md)**: Executive summary for technical leadership and management.
 * **[`bill_fraud_system/`](bill_fraud_system/)**: Legacy baseline v1 system.
-* **[`EXECUTIVE_BENCHMARK_REPORT.md`](fraud_engine_v2/EXECUTIVE_BENCHMARK_REPORT.md)**: Executive whitepaper for technical leadership and management.
 * **[`index.html`](index.html)**: Live web report for GitHub Pages.
 
 ---
